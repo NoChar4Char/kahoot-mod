@@ -10,6 +10,8 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -34,8 +36,9 @@ public class EnergyEvents {
                 }
 
                 if (energy.getEnergy() <= 0 && player.tickCount % 20 == 0) {
-                    player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 2, false, false));
-                    player.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 40, 2, false, false));
+                    player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 255, false, false));
+                    player.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 40, 255, false, false));
+                    player.addEffect(new MobEffectInstance(MobEffects.JUMP, 40, 200, false, false));
                 }
 
                 if (changed) {
@@ -47,10 +50,38 @@ public class EnergyEvents {
 
     @SubscribeEvent
     public static void onPlayerAttack(AttackEntityEvent event) {
-        if (event.getEntity() != null && !event.getEntity().level().isClientSide) {
+        if (event.getEntity() != null) {
             event.getEntity().getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
-                energy.consumeEnergy(5);
-                NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy()), PacketDistributor.PLAYER.with((ServerPlayer) event.getEntity()));
+                if (energy.getEnergy() <= 0) {
+                    event.setCanceled(true);
+                    return;
+                }
+                if (!event.getEntity().level().isClientSide) {
+                    energy.consumeEnergy(5);
+                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy()), PacketDistributor.PLAYER.with((ServerPlayer) event.getEntity()));
+                }
+            });
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerInteract(PlayerInteractEvent event) {
+        if (event.getEntity() != null) {
+            event.getEntity().getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
+                if (energy.getEnergy() <= 0) {
+                    event.setCanceled(true);
+                }
+            });
+        }
+    }
+
+    @SubscribeEvent
+    public static void onBlockBreak(BlockEvent.BreakEvent event) {
+        if (event.getPlayer() != null) {
+            event.getPlayer().getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
+                if (energy.getEnergy() <= 0) {
+                    event.setCanceled(true);
+                }
             });
         }
     }
