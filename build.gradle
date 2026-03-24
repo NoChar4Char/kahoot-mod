@@ -28,7 +28,9 @@ minecraft {
             systemProperty 'forge.enabledGameTestNamespaces', 'kahootmod'
         }
 
-        register('client')
+        register('client') {
+            jvmArgs '-XstartOnFirstThread'
+        }
 
         register('server') {
             args '--nogui'
