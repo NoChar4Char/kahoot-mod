@@ -20,6 +20,17 @@ public class SyncEnergyPacket {
     }
 
     public void handle(CustomPayloadEvent.Context context) {
-        EnergyHUD.clientEnergy = this.energy;
+        context.enqueueWork(() -> {
+            EnergyHUD.clientEnergy = this.energy;
+            if (this.energy <= 0) {
+                if (!(net.minecraft.client.Minecraft.getInstance().screen instanceof com.kahootmod.client.MCQScreen)) {
+                    com.kahootmod.QuestionManager.Question q = com.kahootmod.QuestionManager.getRandomQuestion();
+                    if (q != null) {
+                        net.minecraft.client.Minecraft.getInstance().setScreen(new com.kahootmod.client.MCQScreen(q.text, q.answers, q.correctIndex));
+                    }
+                }
+            }
+        });
+        context.setPacketHandled(true);
     }
 }

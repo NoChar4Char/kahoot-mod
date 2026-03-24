@@ -1,22 +1,31 @@
 package com.kahootmod.data;
 
+import net.minecraft.nbt.CompoundTag;
+
 public class EnergyData {
-    public static final int MAX_ENERGY = 100;
-    private int energy = MAX_ENERGY;
+    private int energy = -1; // -1 indicates uninitialized
 
     public int getEnergy() {
         return energy;
     }
 
     public void setEnergy(int energy) {
-        this.energy = Math.max(0, Math.min(MAX_ENERGY, energy));
+        this.energy = Math.max(0, energy);
     }
 
     public void consumeEnergy(int amount) {
-        setEnergy(this.energy - amount);
+        this.energy = Math.max(0, this.energy - amount);
     }
 
-    public void addEnergy(int amount) {
-        setEnergy(this.energy + amount);
+    public void addEnergy(int amount, int maxEnergy) {
+        this.energy = Math.min(maxEnergy, this.energy + amount);
+    }
+
+    public void saveNBTData(CompoundTag nbt) {
+        nbt.putInt("Energy", energy);
+    }
+
+    public void loadNBTData(CompoundTag nbt) {
+        energy = nbt.getInt("Energy");
     }
 }

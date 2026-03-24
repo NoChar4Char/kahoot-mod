@@ -15,35 +15,35 @@ import java.util.List;
 import java.util.Random;
 
 public class QuestionManager {
-    private static final File CONFIG_FILE = new File(FMLPaths.CONFIGDIR.get().toFile(), "kahoot_questions.json");
+    public static final File PACKS_DIR = new File(FMLPaths.CONFIGDIR.get().toFile(), "kahoot_packs");
     private static final Gson GSON = new Gson();
     private static List<Question> questions = new ArrayList<>();
     private static final Random RANDOM = new Random();
 
     public static void loadQuestions() {
-        if (!CONFIG_FILE.exists()) {
-            createDefaultQuestions();
+        if (!PACKS_DIR.exists()) {
+            PACKS_DIR.mkdirs();
         }
         
-        try (FileReader reader = new FileReader(CONFIG_FILE)) {
-            Type listType = new TypeToken<List<Question>>() {}.getType();
-            questions = GSON.fromJson(reader, listType);
-        } catch (IOException e) {
-            e.printStackTrace();
+        List<Question> newQuestions = new ArrayList<>();
+        File[] files = PACKS_DIR.listFiles((dir, name) -> name.endsWith(".json"));
+        if (files != null && files.length > 0) {
+            // Load exclusively only the first pack
+            try (FileReader reader = new FileReader(files[0])) {
+                Type listType = new TypeToken<List<Question>>() {}.getType();
+                List<Question> imported = GSON.fromJson(reader, listType);
+                if (imported != null) {
+                    newQuestions.addAll(imported);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
+        questions = newQuestions;
     }
 
-    private static void createDefaultQuestions() {
-        questions = Arrays.asList(
-            new Question("What is 2 + 2?", Arrays.asList("3", "4", "5", "6"), 1),
-            new Question("What is the capital of France?", Arrays.asList("Berlin", "Madrid", "Paris", "Rome"), 2),
-            new Question("How do you craft a torch?", Arrays.asList("Stick + Coal", "Wood + Coal", "Stick + Flint", "Wood + Flint"), 0)
-        );
-        try (FileWriter writer = new FileWriter(CONFIG_FILE)) {
-            GSON.toJson(questions, writer);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    public static int getQuestionCount() {
+        return questions.size();
     }
 
     public static Question getRandomQuestion() {

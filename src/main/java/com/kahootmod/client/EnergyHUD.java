@@ -30,7 +30,7 @@ public class EnergyHUD {
                 int x = screenWidth / 2 + 10;
                 int y = screenHeight - 49;
                 
-                guiGraphics.drawString(mc.font, "Energy: " + clientEnergy, x, y, 0xFFFF00, true);
+                guiGraphics.drawString(mc.font, "Energy: " + (clientEnergy / 10.0f), x, y, 0xFFFF00, true);
             }
         );
     }
