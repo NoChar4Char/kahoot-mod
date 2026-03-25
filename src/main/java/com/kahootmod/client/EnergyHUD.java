@@ -14,6 +14,7 @@ import net.minecraft.resources.ResourceLocation;
 public class EnergyHUD {
     
     public static int clientEnergy = 100;
+    public static int clientMaxEnergy = 1000;
 
     @SubscribeEvent
     public static void registerOverlays(AddGuiOverlayLayersEvent event) {
@@ -31,6 +32,10 @@ public class EnergyHUD {
                 int y = screenHeight - 49;
                 
                 guiGraphics.drawString(mc.font, "Energy: " + (clientEnergy / 10.0f), x, y, 0xFFFF00, true);
+                
+                if (clientEnergy <= clientMaxEnergy * 0.1f && clientEnergy > 0) {
+                    guiGraphics.drawCenteredString(mc.font, "Low Energy!", screenWidth / 2, screenHeight / 2 + 30, 0xFF0000);
+                }
             }
         );
     }

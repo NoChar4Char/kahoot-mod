@@ -52,7 +52,7 @@ public class EnergyEvents {
                 }
                 
                 if (energy.getEnergy() != before) {
-                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy()), PacketDistributor.PLAYER.with((ServerPlayer) player));
+                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), player.level().getGameRules().getInt(ModGameRules.MAX_ENERGY)), PacketDistributor.PLAYER.with((ServerPlayer) player));
                 }
             });
         }
@@ -68,7 +68,7 @@ public class EnergyEvents {
                 }
                 if (!event.getEntity().level().isClientSide) {
                     energy.consumeEnergy(event.getEntity().level().getGameRules().getInt(ModGameRules.DRAIN_ATTACK));
-                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy()), PacketDistributor.PLAYER.with((ServerPlayer) event.getEntity()));
+                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), event.getEntity().level().getGameRules().getInt(ModGameRules.MAX_ENERGY)), PacketDistributor.PLAYER.with((ServerPlayer) event.getEntity()));
                 }
             });
         }
@@ -95,7 +95,7 @@ public class EnergyEvents {
                 }
                 if (!event.getPlayer().level().isClientSide) {
                     energy.consumeEnergy(event.getPlayer().level().getGameRules().getInt(ModGameRules.DRAIN_BLOCK));
-                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy()), PacketDistributor.PLAYER.with((ServerPlayer) event.getPlayer()));
+                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), event.getPlayer().level().getGameRules().getInt(ModGameRules.MAX_ENERGY)), PacketDistributor.PLAYER.with((ServerPlayer) event.getPlayer()));
                 }
             });
         }
@@ -107,7 +107,7 @@ public class EnergyEvents {
             if (event.getItem().getItem().components().has(net.minecraft.core.component.DataComponents.FOOD)) {
                 player.getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
                     energy.consumeEnergy(player.level().getGameRules().getInt(ModGameRules.DRAIN_EAT));
-                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy()), PacketDistributor.PLAYER.with((ServerPlayer) player));
+                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), player.level().getGameRules().getInt(ModGameRules.MAX_ENERGY)), PacketDistributor.PLAYER.with((ServerPlayer) player));
                 });
             }
         }
@@ -120,7 +120,7 @@ public class EnergyEvents {
                 int drain = (int)(event.getAmount() / 2.0f * player.level().getGameRules().getInt(ModGameRules.DRAIN_HEAL));
                 if (drain > 0) {
                     energy.consumeEnergy(drain);
-                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy()), PacketDistributor.PLAYER.with((ServerPlayer) player));
+                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), player.level().getGameRules().getInt(ModGameRules.MAX_ENERGY)), PacketDistributor.PLAYER.with((ServerPlayer) player));
                 }
             });
         }
@@ -133,7 +133,7 @@ public class EnergyEvents {
                 player.getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
                     if (energy.getEnergy() > 0) {
                         energy.consumeEnergy(player.level().getGameRules().getInt(ModGameRules.DRAIN_BOW));
-                        NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy()), PacketDistributor.PLAYER.with((ServerPlayer) player));
+                        NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), player.level().getGameRules().getInt(ModGameRules.MAX_ENERGY)), PacketDistributor.PLAYER.with((ServerPlayer) player));
                     }
                 });
             }
@@ -142,21 +142,34 @@ public class EnergyEvents {
 
     @SubscribeEvent
     public static void onPlayerClone(PlayerEvent.Clone event) {
+        if (event.isWasDeath()) {
+            event.getOriginal().reviveCaps();
+        }
         event.getOriginal().getCapability(EnergyCapability.INSTANCE).ifPresent(oldEnergy -> {
             event.getEntity().getCapability(EnergyCapability.INSTANCE).ifPresent(newEnergy -> {
                 newEnergy.setEnergy(oldEnergy.getEnergy());
             });
         });
+        if (event.isWasDeath()) {
+            event.getOriginal().invalidateCaps();
+        }
     }
 
     @SubscribeEvent
-    public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
-        if (!event.getEntity().level().isClientSide) {
-            if (com.kahootmod.QuestionManager.getQuestionCount() == 0) {
-                if (event.getEntity() instanceof ServerPlayer player) {
-                    player.connection.disconnect(Component.literal("You must have a Kahoot Pack loaded to join the game!"));
-                }
-            }
+    public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
+        if (!event.getEntity().level().isClientSide && event.getEntity() instanceof ServerPlayer player) {
+            player.getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
+                NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), player.level().getGameRules().getInt(ModGameRules.MAX_ENERGY)), PacketDistributor.PLAYER.with(player));
+            });
+        }
+    }
+    
+    @SubscribeEvent
+    public static void onPlayerLoginState(PlayerEvent.PlayerLoggedInEvent event) {
+        if (!event.getEntity().level().isClientSide && event.getEntity() instanceof ServerPlayer player) {
+            player.getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
+                NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), player.level().getGameRules().getInt(ModGameRules.MAX_ENERGY)), PacketDistributor.PLAYER.with(player));
+            });
         }
     }
 }

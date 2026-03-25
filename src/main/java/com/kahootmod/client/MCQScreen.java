@@ -14,7 +14,6 @@ public class MCQScreen extends Screen {
     private final List<String> answers;
     private final int correctIndex;
     private boolean answeredCorrectly = false;
-    private long freezeEndTime = 0;
     private int answerStatus = 0;
 
     public MCQScreen(String question, List<String> answers, int correctIndex) {
@@ -27,16 +26,30 @@ public class MCQScreen extends Screen {
     @Override
     protected void init() {
         super.init();
-        int btnWidth = 150;
-        int btnHeight = 20;
         
+        int btnWidth = 200;
+        int btnHeight = 40;
+        
+        int leaveAndQuitY = this.height / 2 + 80;
+        if (com.kahootmod.client.EnergyHUD.clientEnergy > 0) {
+            this.addRenderableWidget(Button.builder(Component.literal("Leave Menu (ESC)"), btn -> {
+                this.minecraft.setScreen(null);
+            }).bounds(this.width / 2 - 100, leaveAndQuitY, 200, 20).build());
+        } else {
+            this.addRenderableWidget(Button.builder(Component.literal("Save and Quit to Title"), btn -> {
+                if (this.minecraft.level != null) {
+                    this.minecraft.level.disconnect();
+                }
+                this.minecraft.disconnect(new net.minecraft.client.gui.screens.TitleScreen());
+            }).bounds(this.width / 2 - 100, leaveAndQuitY, 200, 20).build());
+        }
+
         for (int i = 0; i < answers.size(); i++) {
             int x = (this.width / 2) - (btnWidth / 2) + (i % 2 == 0 ? -80 : 80);
             int y = (this.height / 2) + (i / 2 == 0 ? -10 : 20);
             
             final int index = i;
             this.addRenderableWidget(Button.builder(Component.literal(answers.get(i)), btn -> {
-                if (this.freezeEndTime > 0) return;
                 if (index == this.correctIndex) {
                     com.kahootmod.network.NetworkHandler.CHANNEL.send(new com.kahootmod.network.RewardEnergyPacket(20), net.minecraftforge.network.PacketDistributor.SERVER.noArg());
                     this.answeredCorrectly = true;
@@ -44,35 +57,76 @@ public class MCQScreen extends Screen {
                 } else {
                     this.answerStatus = 2;
                 }
-                this.freezeEndTime = net.minecraft.Util.getMillis() + 1500;
+                this.clearWidgets();
+                this.buildPostAnswerWidgets();
             }).bounds(x, y, btnWidth, btnHeight).build());
         }
     }
 
-    @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        if (this.freezeEndTime > 0 && net.minecraft.Util.getMillis() > this.freezeEndTime) {
-            if (this.answerStatus == 1) {
+    private void buildPostAnswerWidgets() {
+        int centerX = this.width / 2;
+        int y = this.height / 2 + 10;
+        
+        this.addRenderableWidget(Button.builder(Component.literal("Next Question (Space)"), btn -> {
+            com.kahootmod.QuestionManager.Question q = com.kahootmod.QuestionManager.getRandomQuestion();
+            if (q != null) {
+                this.minecraft.setScreen(new MCQScreen(q.text, q.answers, q.correctIndex));
+            }
+        }).bounds(centerX - 100, y, 200, 20).build());
+        
+        y += 25;
+        if (this.answeredCorrectly || com.kahootmod.client.EnergyHUD.clientEnergy > 0) {
+            Button leaveBtn = Button.builder(Component.literal("Leave (ESC)"), btn -> {
                 this.minecraft.setScreen(null);
-            } else if (this.answerStatus == 2) {
+            }).bounds(centerX - 100, y, 200, 20).build();
+            this.addRenderableWidget(leaveBtn);
+        } else {
+            this.addRenderableWidget(Button.builder(Component.literal("Save and Quit to Title"), btn -> {
+                if (this.minecraft.level != null) {
+                    this.minecraft.level.disconnect();
+                }
+                this.minecraft.disconnect(new net.minecraft.client.gui.screens.TitleScreen());
+            }).bounds(centerX - 100, y, 200, 20).build());
+        }
+    }
+
+    @Override
+    public boolean shouldCloseOnEsc() {
+        return (this.answerStatus != 0 && this.answeredCorrectly) || com.kahootmod.client.EnergyHUD.clientEnergy > 0;
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (this.answerStatus != 0) {
+            if (keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_SPACE) {
                 com.kahootmod.QuestionManager.Question q = com.kahootmod.QuestionManager.getRandomQuestion();
                 if (q != null) {
                     this.minecraft.setScreen(new MCQScreen(q.text, q.answers, q.correctIndex));
                 }
+                return true;
             }
-            return;
+            if (keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE) {
+                if (this.answeredCorrectly || com.kahootmod.client.EnergyHUD.clientEnergy > 0) {
+                    this.minecraft.setScreen(null);
+                }
+                return true;
+            }
         }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
 
+    @Override
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         
         guiGraphics.drawCenteredString(this.font, this.question, this.width / 2, this.height / 2 - 50, 0xFFFFFF);
         
         if (this.answerStatus == 1) {
-            guiGraphics.fill(0, this.height / 2 - 80, this.width, this.height / 2 + 80, 0x5500FF00);
+            guiGraphics.fill(0, this.height / 2 - 80, this.width, this.height / 2, 0x5500FF00);
             guiGraphics.drawCenteredString(this.font, "CORRECT!", this.width / 2, this.height / 2 - 70, 0x00FF00);
         } else if (this.answerStatus == 2) {
-            guiGraphics.fill(0, this.height / 2 - 80, this.width, this.height / 2 + 80, 0x55FF0000);
+            guiGraphics.fill(0, this.height / 2 - 80, this.width, this.height / 2, 0x55FF0000);
             guiGraphics.drawCenteredString(this.font, "INCORRECT!", this.width / 2, this.height / 2 - 70, 0xFF0000);
         }
     }
@@ -83,7 +137,10 @@ public class MCQScreen extends Screen {
     }
 
     @Override
-    public boolean shouldCloseOnEsc() {
-        return false;
+    public void tick() {
+        super.tick();
+        if (this.minecraft.player != null && !this.minecraft.player.isAlive()) {
+            this.minecraft.setScreen(null);
+        }
     }
 }
