@@ -28,12 +28,34 @@ public class EnergyHUD {
                 int screenWidth = mc.getWindow().getGuiScaledWidth();
                 int screenHeight = mc.getWindow().getGuiScaledHeight();
 
-                int x = screenWidth / 2 + 10;
-                int y = screenHeight - 49;
+                int totalIcons = 10;
+                float ratio = (float) clientEnergy / clientMaxEnergy;
+                float filledIcons = (float) Math.ceil(ratio * totalIcons * 2.0f) / 2.0f;
+                int startX = screenWidth / 2 + 10;
+                int baseY = screenHeight - 60;
                 
-                guiGraphics.drawString(mc.font, "Energy: " + (clientEnergy / 10.0f), x, y, 0xFFFF00, true);
+                boolean isShaking = clientEnergy <= clientMaxEnergy * 0.1f && clientEnergy > 0;
                 
-                if (clientEnergy <= clientMaxEnergy * 0.1f && clientEnergy > 0) {
+                for (int i = 0; i < totalIcons; i++) {
+                    int iconX = startX + (i * 7);
+                    int iconY = baseY + 10;
+                    
+                    if (isShaking && mc.level != null) {
+                        iconY += mc.level.random.nextInt(3) - 1;
+                    }
+                    
+                    guiGraphics.fill(iconX, iconY, iconX + 6, iconY + 6, 0xFF444444);
+                    
+                    if (i < Math.floor(filledIcons)) {
+                        guiGraphics.fill(iconX, iconY, iconX + 6, iconY + 6, 0xFFFFAA00);
+                    } else if (i == Math.floor(filledIcons) && (filledIcons - i) >= 0.5f) {
+                        guiGraphics.fill(iconX, iconY, iconX + 3, iconY + 6, 0xFFFFAA00);
+                    }
+                }
+                
+                guiGraphics.drawString(mc.font, "Energy: " + (clientEnergy / 10.0f), startX, baseY - 2, 0xFFFF00, true);
+                
+                if (isShaking) {
                     guiGraphics.drawCenteredString(mc.font, "Low Energy!", screenWidth / 2, screenHeight / 2 + 30, 0xFF0000);
                 }
             }

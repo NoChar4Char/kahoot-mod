@@ -25,8 +25,8 @@ public class RewardEnergyPacket {
         Player player = context.getSender();
         if (player != null) {
             player.getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
-                int rewardAmount = player.level().getGameRules().getInt(com.kahootmod.config.ModGameRules.REWARD_ENERGY);
-                int maxEnergy = player.level().getGameRules().getInt(com.kahootmod.config.ModGameRules.MAX_ENERGY);
+                int rewardAmount = com.kahootmod.config.ModConfig.REWARD_ENERGY.get();
+                int maxEnergy = com.kahootmod.config.ModConfig.MAX_ENERGY.get();
                 energy.addEnergy(rewardAmount, maxEnergy);
                 NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), maxEnergy), PacketDistributor.PLAYER.with((net.minecraft.server.level.ServerPlayer) player));
             });

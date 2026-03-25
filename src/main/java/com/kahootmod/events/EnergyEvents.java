@@ -4,7 +4,7 @@ import com.kahootmod.KahootMod;
 import com.kahootmod.data.EnergyCapability;
 import com.kahootmod.network.SyncEnergyPacket;
 import com.kahootmod.network.NetworkHandler;
-import com.kahootmod.config.ModGameRules;
+import com.kahootmod.config.ModConfig;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -34,25 +34,23 @@ public class EnergyEvents {
                 int before = energy.getEnergy();
 
                 if (energy.getEnergy() == -1) {
-                    energy.setEnergy(player.level().getGameRules().getInt(ModGameRules.INITIAL_ENERGY));
+                    energy.setEnergy(ModConfig.INITIAL_ENERGY.get());
                 }
 
-                if (player.isCrouching()) {
-                    if (player.tickCount % 20 == 0) {
-                        energy.consumeEnergy(player.level().getGameRules().getInt(ModGameRules.DRAIN_CROUCH));
-                    }
-                } else if (player.isSprinting() || player.isSwimming()) {
-                    if (player.tickCount % 20 == 0) {
-                        energy.consumeEnergy(player.level().getGameRules().getInt(ModGameRules.DRAIN_SPRINT_SWIM));
-                    }
-                } else if (player.getDeltaMovement().lengthSqr() > 0.001 || player.isFallFlying() || player.isPassenger()) {
-                    if (player.tickCount % 80 == 0) {
-                        energy.consumeEnergy(player.level().getGameRules().getInt(ModGameRules.DRAIN_MOVE_OTHER));
+                if (player.tickCount % 20 == 0) {
+                    if (player.isCrouching()) {
+                        energy.consumeEnergy(ModConfig.DRAIN_CROUCH.get());
+                    } else if (player.isSprinting() || player.isSwimming()) {
+                        energy.consumeEnergy(ModConfig.DRAIN_SPRINT.get());
+                    } else if (player.getDeltaMovement().lengthSqr() > 0.001 || player.isFallFlying() || player.isPassenger()) {
+                        energy.consumeEnergy(ModConfig.DRAIN_MOVE.get());
+                    } else {
+                        energy.consumeEnergy(ModConfig.DRAIN_AFK.get());
                     }
                 }
                 
                 if (energy.getEnergy() != before) {
-                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), player.level().getGameRules().getInt(ModGameRules.MAX_ENERGY)), PacketDistributor.PLAYER.with((ServerPlayer) player));
+                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get()), PacketDistributor.PLAYER.with((ServerPlayer) player));
                 }
             });
         }
@@ -67,8 +65,8 @@ public class EnergyEvents {
                     return;
                 }
                 if (!event.getEntity().level().isClientSide) {
-                    energy.consumeEnergy(event.getEntity().level().getGameRules().getInt(ModGameRules.DRAIN_ATTACK));
-                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), event.getEntity().level().getGameRules().getInt(ModGameRules.MAX_ENERGY)), PacketDistributor.PLAYER.with((ServerPlayer) event.getEntity()));
+                    energy.consumeEnergy(ModConfig.DRAIN_ATTACK.get());
+                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get()), PacketDistributor.PLAYER.with((ServerPlayer) event.getEntity()));
                 }
             });
         }
@@ -86,6 +84,18 @@ public class EnergyEvents {
     }
 
     @SubscribeEvent
+    public static void onBlockInteractDrain(PlayerInteractEvent.RightClickBlock event) {
+        if (event.getEntity() != null && event.getHand() == net.minecraft.world.InteractionHand.MAIN_HAND) {
+            event.getEntity().getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
+                if (energy.getEnergy() > 0 && !event.getLevel().isClientSide) {
+                    energy.consumeEnergy(ModConfig.DRAIN_BLOCK_INTERACT.get());
+                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get()), PacketDistributor.PLAYER.with((ServerPlayer) event.getEntity()));
+                }
+            });
+        }
+    }
+
+    @SubscribeEvent
     public static void onBlockBreak(BlockEvent.BreakEvent event) {
         if (event.getPlayer() != null) {
             event.getPlayer().getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
@@ -94,8 +104,24 @@ public class EnergyEvents {
                     return;
                 }
                 if (!event.getPlayer().level().isClientSide) {
-                    energy.consumeEnergy(event.getPlayer().level().getGameRules().getInt(ModGameRules.DRAIN_BLOCK));
-                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), event.getPlayer().level().getGameRules().getInt(ModGameRules.MAX_ENERGY)), PacketDistributor.PLAYER.with((ServerPlayer) event.getPlayer()));
+                    energy.consumeEnergy(ModConfig.DRAIN_BLOCK_BREAK_PLACE.get());
+                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get()), PacketDistributor.PLAYER.with((ServerPlayer) event.getPlayer()));
+                }
+            });
+        }
+    }
+
+    @SubscribeEvent
+    public static void onBlockPlace(BlockEvent.EntityPlaceEvent event) {
+        if (event.getEntity() instanceof Player player) {
+            player.getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
+                if (energy.getEnergy() == 0) {
+                    event.setCanceled(true);
+                    return;
+                }
+                if (!player.level().isClientSide) {
+                    energy.consumeEnergy(ModConfig.DRAIN_BLOCK_BREAK_PLACE.get());
+                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get()), PacketDistributor.PLAYER.with((ServerPlayer) player));
                 }
             });
         }
@@ -106,8 +132,8 @@ public class EnergyEvents {
         if (event.getEntity() instanceof Player player && !player.level().isClientSide) {
             if (event.getItem().getItem().components().has(net.minecraft.core.component.DataComponents.FOOD)) {
                 player.getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
-                    energy.consumeEnergy(player.level().getGameRules().getInt(ModGameRules.DRAIN_EAT));
-                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), player.level().getGameRules().getInt(ModGameRules.MAX_ENERGY)), PacketDistributor.PLAYER.with((ServerPlayer) player));
+                    energy.consumeEnergy(ModConfig.DRAIN_EAT.get());
+                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get()), PacketDistributor.PLAYER.with((ServerPlayer) player));
                 });
             }
         }
@@ -117,10 +143,10 @@ public class EnergyEvents {
     public static void onPlayerHeal(LivingHealEvent event) {
         if (event.getEntity() instanceof Player player && !player.level().isClientSide) {
             player.getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
-                int drain = (int)(event.getAmount() / 2.0f * player.level().getGameRules().getInt(ModGameRules.DRAIN_HEAL));
+                int drain = (int)(event.getAmount() / 2.0f * ModConfig.DRAIN_HEAL_HALF_HEART.get());
                 if (drain > 0) {
                     energy.consumeEnergy(drain);
-                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), player.level().getGameRules().getInt(ModGameRules.MAX_ENERGY)), PacketDistributor.PLAYER.with((ServerPlayer) player));
+                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get()), PacketDistributor.PLAYER.with((ServerPlayer) player));
                 }
             });
         }
@@ -132,8 +158,8 @@ public class EnergyEvents {
             if (arrow.getOwner() instanceof Player player) {
                 player.getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
                     if (energy.getEnergy() > 0) {
-                        energy.consumeEnergy(player.level().getGameRules().getInt(ModGameRules.DRAIN_BOW));
-                        NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), player.level().getGameRules().getInt(ModGameRules.MAX_ENERGY)), PacketDistributor.PLAYER.with((ServerPlayer) player));
+                        energy.consumeEnergy(ModConfig.DRAIN_BOW.get());
+                        NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get()), PacketDistributor.PLAYER.with((ServerPlayer) player));
                     }
                 });
             }
@@ -159,7 +185,7 @@ public class EnergyEvents {
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         if (!event.getEntity().level().isClientSide && event.getEntity() instanceof ServerPlayer player) {
             player.getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
-                NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), player.level().getGameRules().getInt(ModGameRules.MAX_ENERGY)), PacketDistributor.PLAYER.with(player));
+                NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get()), PacketDistributor.PLAYER.with(player));
             });
         }
     }
@@ -168,7 +194,7 @@ public class EnergyEvents {
     public static void onPlayerLoginState(PlayerEvent.PlayerLoggedInEvent event) {
         if (!event.getEntity().level().isClientSide && event.getEntity() instanceof ServerPlayer player) {
             player.getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
-                NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), player.level().getGameRules().getInt(ModGameRules.MAX_ENERGY)), PacketDistributor.PLAYER.with(player));
+                NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get()), PacketDistributor.PLAYER.with(player));
             });
         }
     }

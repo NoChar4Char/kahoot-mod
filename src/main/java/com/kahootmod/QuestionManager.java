@@ -18,6 +18,7 @@ public class QuestionManager {
     public static final File PACKS_DIR = new File(FMLPaths.CONFIGDIR.get().toFile(), "kahoot_packs");
     private static final Gson GSON = new Gson();
     private static List<Question> questions = new ArrayList<>();
+    private static final java.util.LinkedList<Question> history = new java.util.LinkedList<>();
     private static final Random RANDOM = new Random();
 
     public static void loadQuestions() {
@@ -40,6 +41,7 @@ public class QuestionManager {
             }
         }
         questions = newQuestions;
+        history.clear();
     }
 
     public static int getQuestionCount() {
@@ -48,7 +50,24 @@ public class QuestionManager {
 
     public static Question getRandomQuestion() {
         if (questions.isEmpty()) return null;
-        return questions.get(RANDOM.nextInt(questions.size()));
+        
+        int maxHistory = Math.min(10, questions.size() / 2);
+        Question q = null;
+        
+        for (int i = 0; i < 50; i++) {
+            q = questions.get(RANDOM.nextInt(questions.size()));
+            if (!history.contains(q)) {
+                break;
+            }
+        }
+        
+        if (q != null) {
+            history.addLast(q);
+            while (history.size() > maxHistory) {
+                history.removeFirst();
+            }
+        }
+        return q;
     }
 
     public static class Question {

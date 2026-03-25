@@ -27,26 +27,26 @@ public class MCQScreen extends Screen {
     protected void init() {
         super.init();
         
-        int btnWidth = 200;
-        int btnHeight = 40;
+        int btnWidth = 150;
+        int btnHeight = 20;
         
-        int leaveAndQuitY = this.height / 2 + 80;
+        int leaveAndQuitY = this.height / 2 + 65;
         if (com.kahootmod.client.EnergyHUD.clientEnergy > 0) {
             this.addRenderableWidget(Button.builder(Component.literal("Leave Menu (ESC)"), btn -> {
                 this.minecraft.setScreen(null);
-            }).bounds(this.width / 2 - 100, leaveAndQuitY, 200, 20).build());
+            }).bounds(this.width / 2 - 75, leaveAndQuitY, 150, 20).build());
         } else {
             this.addRenderableWidget(Button.builder(Component.literal("Save and Quit to Title"), btn -> {
                 if (this.minecraft.level != null) {
                     this.minecraft.level.disconnect();
                 }
                 this.minecraft.disconnect(new net.minecraft.client.gui.screens.TitleScreen());
-            }).bounds(this.width / 2 - 100, leaveAndQuitY, 200, 20).build());
+            }).bounds(this.width / 2 - 75, leaveAndQuitY, 150, 20).build());
         }
 
         for (int i = 0; i < answers.size(); i++) {
             int x = (this.width / 2) - (btnWidth / 2) + (i % 2 == 0 ? -80 : 80);
-            int y = (this.height / 2) + (i / 2 == 0 ? -10 : 20);
+            int y = (this.height / 2) + (i / 2 == 0 ? -15 : 15);
             
             final int index = i;
             this.addRenderableWidget(Button.builder(Component.literal(answers.get(i)), btn -> {
