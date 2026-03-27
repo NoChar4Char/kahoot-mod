@@ -1,4 +1,4 @@
-package com.kahootmod.config;
+package com.flashcardmod.config;
 
 import net.minecraftforge.common.ForgeConfigSpec;
 

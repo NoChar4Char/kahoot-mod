@@ -1,4 +1,4 @@
-package com.kahootmod.client;
+package com.flashcardmod.client;
 
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.Button;
@@ -6,15 +6,15 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
-import com.kahootmod.QuestionManager;
+import com.flashcardmod.QuestionManager;
 import net.minecraft.Util;
 
 @OnlyIn(Dist.CLIENT)
-public class KahootPacksScreen extends Screen {
+public class FlashcardPacksScreen extends Screen {
     private String statusMessage = "";
 
-    public KahootPacksScreen() {
-        super(Component.literal("Kahoot Packs"));
+    public FlashcardPacksScreen() {
+        super(Component.literal("Flashcard Packs"));
     }
 
     @Override
@@ -23,18 +23,20 @@ public class KahootPacksScreen extends Screen {
         int centerX = this.width / 2;
         int centerY = this.height / 2;
         
+        int btnWidth = 200;
+        
         this.addRenderableWidget(Button.builder(Component.literal("Open Packs Folder"), btn -> {
             Util.getPlatform().openFile(QuestionManager.PACKS_DIR);
-        }).bounds(centerX - 100, centerY - 20, 200, 20).build());
+        }).bounds(centerX - 100, centerY - 20, btnWidth, 20).build());
         
         this.addRenderableWidget(Button.builder(Component.literal("Reload Packs"), btn -> {
             QuestionManager.loadQuestions();
             this.statusMessage = "Loaded " + QuestionManager.getQuestionCount() + " questions!";
-        }).bounds(centerX - 100, centerY + 10, 200, 20).build());
+        }).bounds(centerX - 100, centerY + 10, btnWidth, 20).build());
         
         this.addRenderableWidget(Button.builder(Component.literal("Done"), btn -> {
             this.minecraft.setScreen(null);
-        }).bounds(centerX - 100, centerY + 40, 200, 20).build());
+        }).bounds(centerX - 100, centerY + 40, btnWidth, 20).build());
     }
 
     @Override

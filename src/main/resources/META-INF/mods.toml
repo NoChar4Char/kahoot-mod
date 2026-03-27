@@ -9,9 +9,9 @@ license="All Rights Reserved"
 #clientSideOnly=true #optional, default=false
 
 [[mods]]
-modId="kahootmod"
+modId="flashcardmod"
 version="1.0.0"
-displayName="Kahoot Energy Mod"
+displayName="Flashcard Energy Mod"
 #updateJSONURL="https://example.com/updates.json" #optional
 #displayURL="https://example.com/" #optional
 #logoFile="examplemod.png" #optional
@@ -22,14 +22,14 @@ authors="YourNameHere, OtherNameHere" #optional
 description='''Example mod description.
 Newline characters can be used like this, and rendered on the mods screen properly.'''
 
-[[dependencies.kahootmod]] #recommended
+[[dependencies.flashcardmod]] #recommended
     modId="forge"
     mandatory=true
     versionRange="[0,)"
     ordering="NONE"
     side="BOTH"
 
-[[dependencies.kahootmod]] #recommended
+[[dependencies.flashcardmod]] #recommended
     modId="minecraft"
     mandatory=true
     versionRange="[1.21.1,1.22,)"

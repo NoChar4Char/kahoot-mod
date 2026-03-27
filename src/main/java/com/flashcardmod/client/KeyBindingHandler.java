@@ -1,8 +1,8 @@
-package com.kahootmod.client;
+package com.flashcardmod.client;
 
-import com.kahootmod.network.AnswerPacket;
-import com.kahootmod.network.NetworkHandler;
-import com.kahootmod.QuestionManager;
+import com.flashcardmod.network.AnswerPacket;
+import com.flashcardmod.network.NetworkHandler;
+import com.flashcardmod.QuestionManager;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -16,14 +16,14 @@ import org.lwjgl.glfw.GLFW;
 
 public class KeyBindingHandler {
     public static final KeyMapping MCQ_KEY = new KeyMapping(
-            "key.kahootmod.open_mcq",
+            "key.flashcardmod.open_mcq",
             KeyConflictContext.IN_GAME,
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_K,
-            "category.kahootmod.keys"
+            "category.flashcardmod.keys"
     );
 
-    @Mod.EventBusSubscriber(modid = com.kahootmod.KahootMod.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
+    @Mod.EventBusSubscriber(modid = com.flashcardmod.FlashcardMod.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
     public static class ModClientEvents {
         @SubscribeEvent
         public static void registerKeyBindings(RegisterKeyMappingsEvent event) {
@@ -31,7 +31,7 @@ public class KeyBindingHandler {
         }
     }
 
-    @Mod.EventBusSubscriber(modid = com.kahootmod.KahootMod.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
+    @Mod.EventBusSubscriber(modid = com.flashcardmod.FlashcardMod.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
     public static class ForgeClientEvents {
         @SubscribeEvent
         public static void onClientTick(TickEvent.ClientTickEvent event) {

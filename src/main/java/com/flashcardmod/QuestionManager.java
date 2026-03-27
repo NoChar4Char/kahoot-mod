@@ -1,4 +1,4 @@
-package com.kahootmod;
+package com.flashcardmod;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Random;
 
 public class QuestionManager {
-    public static final File PACKS_DIR = new File(FMLPaths.CONFIGDIR.get().toFile(), "kahoot_packs");
+    public static final File PACKS_DIR = new File(FMLPaths.CONFIGDIR.get().toFile(), "flashcard_packs");
     private static final Gson GSON = new Gson();
     private static List<Question> questions = new ArrayList<>();
     private static final java.util.LinkedList<Question> history = new java.util.LinkedList<>();
@@ -66,6 +66,10 @@ public class QuestionManager {
             while (history.size() > maxHistory) {
                 history.removeFirst();
             }
+            List<String> shuffledAnswers = new ArrayList<>(q.answers);
+            java.util.Collections.shuffle(shuffledAnswers);
+            int newCorrectIndex = shuffledAnswers.indexOf(q.answers.get(q.correctIndex));
+            return new Question(q.text, shuffledAnswers, newCorrectIndex);
         }
         return q;
     }

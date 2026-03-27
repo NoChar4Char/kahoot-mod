@@ -1,6 +1,6 @@
-package com.kahootmod.network;
+package com.flashcardmod.network;
 
-import com.kahootmod.KahootMod;
+import com.flashcardmod.FlashcardMod;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.ChannelBuilder;
 import net.minecraftforge.network.SimpleChannel;
@@ -8,10 +8,10 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
-@Mod.EventBusSubscriber(modid = KahootMod.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
+@Mod.EventBusSubscriber(modid = FlashcardMod.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class NetworkHandler {
     public static final SimpleChannel CHANNEL = ChannelBuilder.named(
-        ResourceLocation.fromNamespaceAndPath(KahootMod.MODID, "main")
+        ResourceLocation.fromNamespaceAndPath(FlashcardMod.MODID, "main")
     ).networkProtocolVersion(1).simpleChannel();
 
     @SubscribeEvent

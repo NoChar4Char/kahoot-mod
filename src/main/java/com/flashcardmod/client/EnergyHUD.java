@@ -1,4 +1,4 @@
-package com.kahootmod.client;
+package com.flashcardmod.client;
 
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.AddGuiOverlayLayersEvent;
@@ -10,17 +10,19 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.resources.ResourceLocation;
 
-@Mod.EventBusSubscriber(modid = com.kahootmod.KahootMod.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
+@Mod.EventBusSubscriber(modid = com.flashcardmod.FlashcardMod.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class EnergyHUD {
     
     public static int clientEnergy = 100;
     public static int clientMaxEnergy = 1000;
+    public static int questionsAnswered = 0;
+    public static int questionsCorrect = 0;
 
     @SubscribeEvent
     public static void registerOverlays(AddGuiOverlayLayersEvent event) {
         event.getLayeredDraw().add(
             ForgeLayeredDraw.VANILLA_ROOT,
-            ResourceLocation.fromNamespaceAndPath(com.kahootmod.KahootMod.MODID, "energy_hud"),
+            ResourceLocation.fromNamespaceAndPath(com.flashcardmod.FlashcardMod.MODID, "energy_hud"),
             (GuiGraphics guiGraphics, DeltaTracker deltaTracker) -> {
                 Minecraft mc = Minecraft.getInstance();
                 if (mc.options.hideGui || mc.player == null || mc.player.isSpectator()) return;
@@ -54,6 +56,11 @@ public class EnergyHUD {
                 }
                 
                 guiGraphics.drawString(mc.font, "Energy: " + (clientEnergy / 10.0f), startX, baseY - 2, 0xFFFF00, true);
+                
+                if (questionsAnswered > 0) {
+                    int percentage = (int) (((float)questionsCorrect / questionsAnswered) * 100);
+                    guiGraphics.drawString(mc.font, "Questions: " + questionsCorrect + "/" + questionsAnswered + " (" + percentage + "%)", startX, baseY - 12, 0xFFFFFF, true);
+                }
                 
                 if (isShaking) {
                     guiGraphics.drawCenteredString(mc.font, "Low Energy!", screenWidth / 2, screenHeight / 2 + 30, 0xFF0000);

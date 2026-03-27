@@ -1,10 +1,10 @@
-package com.kahootmod.events;
+package com.flashcardmod.events;
 
-import com.kahootmod.KahootMod;
-import com.kahootmod.data.EnergyCapability;
-import com.kahootmod.network.SyncEnergyPacket;
-import com.kahootmod.network.NetworkHandler;
-import com.kahootmod.config.ModConfig;
+import com.flashcardmod.FlashcardMod;
+import com.flashcardmod.data.EnergyCapability;
+import com.flashcardmod.network.SyncEnergyPacket;
+import com.flashcardmod.network.NetworkHandler;
+import com.flashcardmod.config.ModConfig;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -23,13 +23,14 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
 
-@Mod.EventBusSubscriber(modid = KahootMod.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@Mod.EventBusSubscriber(modid = FlashcardMod.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class EnergyEvents {
 
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
         if (event.phase == TickEvent.Phase.END && !event.player.level().isClientSide) {
             Player player = event.player;
+            if (player.isCreative() || player.isSpectator()) return;
             player.getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
                 int before = energy.getEnergy();
 
@@ -50,7 +51,7 @@ public class EnergyEvents {
                 }
                 
                 if (energy.getEnergy() != before) {
-                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get()), PacketDistributor.PLAYER.with((ServerPlayer) player));
+                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get(), energy.getQuestionsAnswered(), energy.getQuestionsCorrect()), PacketDistributor.PLAYER.with((ServerPlayer) player));
                 }
             });
         }
@@ -59,14 +60,16 @@ public class EnergyEvents {
     @SubscribeEvent
     public static void onPlayerAttack(AttackEntityEvent event) {
         if (event.getEntity() != null) {
-            event.getEntity().getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
+            Player player = event.getEntity();
+            if (player.isCreative() || player.isSpectator()) return;
+            player.getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
                 if (energy.getEnergy() == 0) {
                     event.setCanceled(true);
                     return;
                 }
                 if (!event.getEntity().level().isClientSide) {
                     energy.consumeEnergy(ModConfig.DRAIN_ATTACK.get());
-                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get()), PacketDistributor.PLAYER.with((ServerPlayer) event.getEntity()));
+                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get(), energy.getQuestionsAnswered(), energy.getQuestionsCorrect()), PacketDistributor.PLAYER.with((ServerPlayer) event.getEntity()));
                 }
             });
         }
@@ -75,7 +78,9 @@ public class EnergyEvents {
     @SubscribeEvent
     public static void onPlayerInteract(PlayerInteractEvent event) {
         if (event.getEntity() != null) {
-            event.getEntity().getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
+            Player player = event.getEntity();
+            if (player.isCreative() || player.isSpectator()) return;
+            player.getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
                 if (energy.getEnergy() == 0 && event.isCancelable()) {
                     event.setCanceled(true);
                 }
@@ -86,10 +91,12 @@ public class EnergyEvents {
     @SubscribeEvent
     public static void onBlockInteractDrain(PlayerInteractEvent.RightClickBlock event) {
         if (event.getEntity() != null && event.getHand() == net.minecraft.world.InteractionHand.MAIN_HAND) {
-            event.getEntity().getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
+            Player player = event.getEntity();
+            if (player.isCreative() || player.isSpectator()) return;
+            player.getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
                 if (energy.getEnergy() > 0 && !event.getLevel().isClientSide) {
                     energy.consumeEnergy(ModConfig.DRAIN_BLOCK_INTERACT.get());
-                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get()), PacketDistributor.PLAYER.with((ServerPlayer) event.getEntity()));
+                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get(), energy.getQuestionsAnswered(), energy.getQuestionsCorrect()), PacketDistributor.PLAYER.with((ServerPlayer) event.getEntity()));
                 }
             });
         }
@@ -98,14 +105,16 @@ public class EnergyEvents {
     @SubscribeEvent
     public static void onBlockBreak(BlockEvent.BreakEvent event) {
         if (event.getPlayer() != null) {
-            event.getPlayer().getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
+            Player player = event.getPlayer();
+            if (player.isCreative() || player.isSpectator()) return;
+            player.getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
                 if (energy.getEnergy() == 0) {
                     event.setCanceled(true);
                     return;
                 }
                 if (!event.getPlayer().level().isClientSide) {
                     energy.consumeEnergy(ModConfig.DRAIN_BLOCK_BREAK_PLACE.get());
-                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get()), PacketDistributor.PLAYER.with((ServerPlayer) event.getPlayer()));
+                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get(), energy.getQuestionsAnswered(), energy.getQuestionsCorrect()), PacketDistributor.PLAYER.with((ServerPlayer) event.getPlayer()));
                 }
             });
         }
@@ -114,6 +123,7 @@ public class EnergyEvents {
     @SubscribeEvent
     public static void onBlockPlace(BlockEvent.EntityPlaceEvent event) {
         if (event.getEntity() instanceof Player player) {
+            if (player.isCreative() || player.isSpectator()) return;
             player.getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
                 if (energy.getEnergy() == 0) {
                     event.setCanceled(true);
@@ -121,7 +131,7 @@ public class EnergyEvents {
                 }
                 if (!player.level().isClientSide) {
                     energy.consumeEnergy(ModConfig.DRAIN_BLOCK_BREAK_PLACE.get());
-                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get()), PacketDistributor.PLAYER.with((ServerPlayer) player));
+                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get(), energy.getQuestionsAnswered(), energy.getQuestionsCorrect()), PacketDistributor.PLAYER.with((ServerPlayer) player));
                 }
             });
         }
@@ -130,10 +140,11 @@ public class EnergyEvents {
     @SubscribeEvent
     public static void onItemUseFinish(LivingEntityUseItemEvent.Finish event) {
         if (event.getEntity() instanceof Player player && !player.level().isClientSide) {
+            if (player.isCreative() || player.isSpectator()) return;
             if (event.getItem().getItem().components().has(net.minecraft.core.component.DataComponents.FOOD)) {
                 player.getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
                     energy.consumeEnergy(ModConfig.DRAIN_EAT.get());
-                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get()), PacketDistributor.PLAYER.with((ServerPlayer) player));
+                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get(), energy.getQuestionsAnswered(), energy.getQuestionsCorrect()), PacketDistributor.PLAYER.with((ServerPlayer) player));
                 });
             }
         }
@@ -142,11 +153,12 @@ public class EnergyEvents {
     @SubscribeEvent
     public static void onPlayerHeal(LivingHealEvent event) {
         if (event.getEntity() instanceof Player player && !player.level().isClientSide) {
+            if (player.isCreative() || player.isSpectator()) return;
             player.getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
                 int drain = (int)(event.getAmount() / 2.0f * ModConfig.DRAIN_HEAL_HALF_HEART.get());
                 if (drain > 0) {
                     energy.consumeEnergy(drain);
-                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get()), PacketDistributor.PLAYER.with((ServerPlayer) player));
+                    NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get(), energy.getQuestionsAnswered(), energy.getQuestionsCorrect()), PacketDistributor.PLAYER.with((ServerPlayer) player));
                 }
             });
         }
@@ -156,10 +168,11 @@ public class EnergyEvents {
     public static void onArrowShoot(EntityJoinLevelEvent event) {
         if (event.getEntity() instanceof AbstractArrow arrow && !arrow.level().isClientSide) {
             if (arrow.getOwner() instanceof Player player) {
+                if (player.isCreative() || player.isSpectator()) return;
                 player.getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
                     if (energy.getEnergy() > 0) {
                         energy.consumeEnergy(ModConfig.DRAIN_BOW.get());
-                        NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get()), PacketDistributor.PLAYER.with((ServerPlayer) player));
+                        NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get(), energy.getQuestionsAnswered(), energy.getQuestionsCorrect()), PacketDistributor.PLAYER.with((ServerPlayer) player));
                     }
                 });
             }
@@ -185,7 +198,7 @@ public class EnergyEvents {
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         if (!event.getEntity().level().isClientSide && event.getEntity() instanceof ServerPlayer player) {
             player.getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
-                NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get()), PacketDistributor.PLAYER.with(player));
+                NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get(), energy.getQuestionsAnswered(), energy.getQuestionsCorrect()), PacketDistributor.PLAYER.with(player));
             });
         }
     }
@@ -194,7 +207,12 @@ public class EnergyEvents {
     public static void onPlayerLoginState(PlayerEvent.PlayerLoggedInEvent event) {
         if (!event.getEntity().level().isClientSide && event.getEntity() instanceof ServerPlayer player) {
             player.getCapability(EnergyCapability.INSTANCE).ifPresent(energy -> {
-                NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get()), PacketDistributor.PLAYER.with(player));
+                if (!energy.hasSeenWelcome()) {
+                    energy.setHasSeenWelcome(true);
+                    player.sendSystemMessage(Component.literal("§eWelcome to Flashcard Mod!"));
+                    player.sendSystemMessage(Component.literal("§fPress §bK§f to answer questions. You need to answer questions to restore your Energy, which drains as you play!"));
+                }
+                NetworkHandler.CHANNEL.send(new SyncEnergyPacket(energy.getEnergy(), ModConfig.MAX_ENERGY.get(), energy.getQuestionsAnswered(), energy.getQuestionsCorrect()), PacketDistributor.PLAYER.with(player));
             });
         }
     }
